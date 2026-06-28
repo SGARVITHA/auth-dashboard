@@ -78,4 +78,70 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
+ 
+// PUT /auth/password — change password
+// Requires: currentPassword, newPassword in body
+router.put('/password', authMiddleware, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+ 
+  if (!currentPassword || !newPassword)
+    return res.status(400).json({ message: 'Current and new password are required' });
+ 
+  try {
+    // 1. Fetch the user from DB
+    const result = await db.query(
+      'SELECT * FROM users WHERE id = $1', [req.user.userId]
+    );
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ message: 'User not found' });
+ 
+    // 2. Verify current password
+    const match = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!match)
+      return res.status(401).json({ message: 'Current password is incorrect' });
+ 
+    // 3. Hash and save new password
+    const hash = await bcrypt.hash(newPassword, 12);
+    await db.query(
+      'UPDATE users SET password_hash = $1 WHERE id = $2',
+      [hash, req.user.userId]
+    );
+ 
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+ 
+ 
+// DELETE /auth/account — remove account
+// Requires: password in body for confirmation
+router.delete('/account', authMiddleware, async (req, res) => {
+  const { password } = req.body;
+ 
+  if (!password)
+    return res.status(400).json({ message: 'Password is required to delete account' });
+ 
+  try {
+    // 1. Fetch user
+    const result = await db.query(
+      'SELECT * FROM users WHERE id = $1', [req.user.userId]
+    );
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ message: 'User not found' });
+ 
+    // 2. Verify password
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match)
+      return res.status(401).json({ message: 'Incorrect password' });
+ 
+    // 3. Delete user from DB
+    await db.query('DELETE FROM users WHERE id = $1', [req.user.userId]);
+ 
+    res.json({ message: 'Account deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;
