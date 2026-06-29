@@ -57,20 +57,20 @@ const s = {
     borderRadius: '6px', padding: '5px 12px', cursor: 'pointer',
   },
 
-  main: { maxWidth: '860px', margin: '0 auto', padding: '36px 24px' },
+  main: { maxWidth: '1200px', margin: '0 auto', padding: '36px 40px' },
 
   pageHeader: { marginBottom: '28px' },
   greeting: { fontSize: '22px', fontWeight: '600', color: '#1A1A1A', letterSpacing: '-0.3px', marginBottom: '4px' },
   greetingSub: { fontSize: '14px', color: '#8C8C8A' },
 
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' },
-  statCard: { background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '10px', padding: '18px 20px' },
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' },
+  statCard: { background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '10px', padding: '24px 28px' },
   statLabel: { fontSize: '11px', fontWeight: '500', color: '#A0A09E', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' },
   statValue: { fontSize: '22px', fontWeight: '600', color: '#1A1A1A', letterSpacing: '-0.4px', marginBottom: '3px' },
   statSub: { fontSize: '12px', color: '#A0A09E' },
   dot: { display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#3EB87A', marginRight: '6px', verticalAlign: 'middle' },
 
-  twoCol: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' },
+  twoCol: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' },
 
   card: { background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '10px', overflow: 'hidden' },
   cardHead: { padding: '13px 18px', borderBottom: '1px solid #F0F0EE', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
@@ -96,7 +96,7 @@ const s = {
   activityText: { fontSize: '13px', color: '#3D3D3B', lineHeight: '1.4' },
   activityTime: { fontSize: '11px', color: '#A0A09E', marginTop: '2px' },
 
-  bottomGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' },
+  bottomGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
   bottomCard: {
     background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '10px',
     padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
