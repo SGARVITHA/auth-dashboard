@@ -30,7 +30,7 @@ const s = {
     borderRadius: '12px',
     padding: '48px 52px',
     width: '100%',
-    maxWidth: '400px',
+    maxWidth: '450px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04)',
     boxSizing: 'border-box',
   },
@@ -138,11 +138,11 @@ export default function RegisterPage() {
 
           {serverError && <div style={s.errBox}>{serverError}</div>}
 
-          <div style={s.row}>
+          
             <div style={s.formGroup}>
               <label style={s.label}>Full name</label>
               <input
-                type="text" placeholder="Garvitha" value={form.name}
+                type="text" placeholder="Full Name" value={form.name}
                 onChange={set('name')} onFocus={() => setFocused('name')} onBlur={() => setFocused('')}
                 style={inputStyle('name')}
               />
@@ -157,7 +157,7 @@ export default function RegisterPage() {
               />
               {errors.email && <div style={s.fieldErr}>{errors.email}</div>}
             </div>
-          </div>
+          
 
           <div style={s.formGroup}>
             <label style={s.label}>Password</label>

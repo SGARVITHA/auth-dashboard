@@ -20,7 +20,7 @@ const s = {
     borderRadius: '12px',
     padding: '48px 52px',
     width: '100%',
-    maxWidth: '400px',
+    maxWidth: '450px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04)',
     boxSizing: 'border-box',
   },
