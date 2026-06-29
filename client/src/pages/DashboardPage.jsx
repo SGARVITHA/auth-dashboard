@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
-// ── HELPERS ─────────────────────────────────────────────
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
 const formatDate = (d) =>
   new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -26,35 +27,26 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+const activities = [
+  { icon: '🔐', bg: '#EEF4FF', text: 'Signed in successfully', time: 'Just now' },
+  { icon: '✅', bg: '#EEFAF4', text: 'JWT token issued — valid for 7 days', time: 'Just now' },
+  { icon: '👤', bg: '#F5F0FF', text: 'Profile loaded from database', time: 'Just now' },
+  { icon: '🛡️', bg: '#FFF7EE', text: 'Protected route accessed', time: 'Just now' },
+];
 
-// ── STYLES ──────────────────────────────────────────────
 const s = {
-  page: {
-    minHeight: '100vh',
-    background: '#F7F7F5',
-    fontFamily: "'Inter', -apple-system, sans-serif",
-  },
+  page: { minHeight: '100vh', background: '#F7F7F5', fontFamily: "'Inter', -apple-system, sans-serif" },
 
-  // NAV
   nav: {
-    background: '#FFFFFF',
-    borderBottom: '1px solid #E5E5E3',
-    padding: '0 32px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: '52px',
-    position: 'sticky',
-    top: 0,
-    zIndex: 10,
+    background: '#FFFFFF', borderBottom: '1px solid #E5E5E3',
+    padding: '0 32px', display: 'flex', alignItems: 'center',
+    justifyContent: 'space-between', height: '52px',
+    position: 'sticky', top: 0, zIndex: 10,
   },
   navLeft: { display: 'flex', alignItems: 'center', gap: '8px' },
   navIcon: {
-    width: '26px', height: '26px',
-    background: '#1A1A1A', borderRadius: '6px',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '13px',
+    width: '26px', height: '26px', background: '#1A1A1A', borderRadius: '6px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px',
   },
   navBrand: { fontSize: '14px', fontWeight: '600', color: '#1A1A1A', letterSpacing: '-0.2px' },
   navRight: { display: 'flex', alignItems: 'center', gap: '10px' },
@@ -65,183 +57,99 @@ const s = {
     borderRadius: '6px', padding: '5px 12px', cursor: 'pointer',
   },
 
-  // MAIN
   main: { maxWidth: '860px', margin: '0 auto', padding: '36px 24px' },
 
   pageHeader: { marginBottom: '28px' },
   greeting: { fontSize: '22px', fontWeight: '600', color: '#1A1A1A', letterSpacing: '-0.3px', marginBottom: '4px' },
   greetingSub: { fontSize: '14px', color: '#8C8C8A' },
 
-  // STATS
-  statsGrid: {
-    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '12px', marginBottom: '16px',
-  },
-  statCard: {
-    background: '#FFFFFF', border: '1px solid #E5E5E3',
-    borderRadius: '10px', padding: '18px 20px',
-  },
-  statLabel: {
-    fontSize: '11px', fontWeight: '500', color: '#A0A09E',
-    textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px',
-  },
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' },
+  statCard: { background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '10px', padding: '18px 20px' },
+  statLabel: { fontSize: '11px', fontWeight: '500', color: '#A0A09E', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' },
   statValue: { fontSize: '22px', fontWeight: '600', color: '#1A1A1A', letterSpacing: '-0.4px', marginBottom: '3px' },
   statSub: { fontSize: '12px', color: '#A0A09E' },
-  dot: {
-    display: 'inline-block', width: '7px', height: '7px',
-    borderRadius: '50%', background: '#3EB87A',
-    marginRight: '6px', verticalAlign: 'middle',
-  },
+  dot: { display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#3EB87A', marginRight: '6px', verticalAlign: 'middle' },
 
-  // TWO COL
   twoCol: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' },
 
-  // CARD
   card: { background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '10px', overflow: 'hidden' },
-  cardHead: {
-    padding: '13px 18px', borderBottom: '1px solid #F0F0EE',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-  },
+  cardHead: { padding: '13px 18px', borderBottom: '1px solid #F0F0EE', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle: { fontSize: '13px', fontWeight: '600', color: '#1A1A1A' },
-  cardBadge: {
-    fontSize: '11px', fontWeight: '500',
-    background: '#F0F0EE', color: '#6B6B69',
-    padding: '2px 8px', borderRadius: '20px',
-  },
+  cardBadge: { fontSize: '11px', fontWeight: '500', background: '#F0F0EE', color: '#6B6B69', padding: '2px 8px', borderRadius: '20px' },
   cardBody: { padding: '18px' },
 
-  // PROFILE
   avatar: {
     width: '44px', height: '44px', background: '#1A1A1A', borderRadius: '50%',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '15px', fontWeight: '600', color: '#FFFFFF',
-    marginBottom: '10px', letterSpacing: '-0.3px',
+    fontSize: '15px', fontWeight: '600', color: '#FFFFFF', marginBottom: '10px',
   },
   profileName: { fontSize: '14px', fontWeight: '600', color: '#1A1A1A', marginBottom: '2px' },
   profileEmail: { fontSize: '13px', color: '#8C8C8A', marginBottom: '14px' },
-  profileRow: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '8px 0', borderTop: '1px solid #F0F0EE',
-  },
+  profileRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderTop: '1px solid #F0F0EE' },
   profileKey: { fontSize: '12px', color: '#A0A09E', fontWeight: '500' },
   profileVal: { fontSize: '12px', color: '#3D3D3B', fontFamily: "'JetBrains Mono', monospace" },
 
-  // ACTIVITY
-  activityItem: {
-    display: 'flex', alignItems: 'flex-start', gap: '10px',
-    padding: '9px 0', borderBottom: '1px solid #F0F0EE',
-  },
+  activityItem: { display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '9px 0', borderBottom: '1px solid #F0F0EE' },
   activityItemLast: { borderBottom: 'none' },
-  activityIconWrap: {
-    width: '28px', height: '28px', borderRadius: '7px',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '13px', flexShrink: 0, marginTop: '1px',
-  },
+  activityIconWrap: { width: '28px', height: '28px', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', flexShrink: 0, marginTop: '1px' },
   activityContent: { flex: 1, minWidth: 0 },
   activityText: { fontSize: '13px', color: '#3D3D3B', lineHeight: '1.4' },
   activityTime: { fontSize: '11px', color: '#A0A09E', marginTop: '2px' },
 
-  // BOTTOM GRID
   bottomGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' },
   bottomCard: {
     background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '10px',
-    padding: '16px 18px', display: 'flex', alignItems: 'center',
-    justifyContent: 'space-between', gap: '12px',
+    padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
   },
   bottomCardDanger: {
     background: '#FFFFFF', border: '1px solid #FFDBD8', borderRadius: '10px',
-    padding: '16px 18px', display: 'flex', alignItems: 'center',
-    justifyContent: 'space-between', gap: '12px',
+    padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
   },
   bottomLeft: { display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 },
-  bottomIconWrap: {
-    width: '34px', height: '34px', background: '#F0F0EE', borderRadius: '8px',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '15px', flexShrink: 0,
-  },
-  bottomIconDanger: {
-    width: '34px', height: '34px', background: '#FFF0EE', borderRadius: '8px',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '15px', flexShrink: 0,
-  },
+  bottomIconWrap: { width: '34px', height: '34px', background: '#F0F0EE', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', flexShrink: 0 },
+  bottomIconDanger: { width: '34px', height: '34px', background: '#FFF0EE', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', flexShrink: 0 },
   bottomTitle: { fontSize: '13px', fontWeight: '500', color: '#1A1A1A', marginBottom: '2px' },
   bottomSub: { fontSize: '12px', color: '#A0A09E' },
-  manageBtn: {
-    fontSize: '13px', fontWeight: '500', color: '#1A1A1A',
-    background: '#F0F0EE', border: 'none', borderRadius: '6px',
-    padding: '6px 13px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-  },
-  removeBtn: {
-    fontSize: '13px', fontWeight: '500', color: '#C9372C',
-    background: '#FFF0EE', border: '1px solid #FFDBD8', borderRadius: '6px',
-    padding: '6px 13px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-  },
+  manageBtn: { fontSize: '13px', fontWeight: '500', color: '#1A1A1A', background: '#F0F0EE', border: 'none', borderRadius: '6px', padding: '6px 13px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
+  removeBtn: { fontSize: '13px', fontWeight: '500', color: '#C9372C', background: '#FFF0EE', border: '1px solid #FFDBD8', borderRadius: '6px', padding: '6px 13px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
 
   // MODAL
-  overlay: {
-    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.25)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    zIndex: 100, padding: '24px',
-  },
-  modal: {
-    background: '#FFFFFF', borderRadius: '12px', padding: '28px',
-    width: '100%', maxWidth: '400px',
-    boxShadow: '0 8px 40px rgba(0,0,0,0.12)',
-  },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '24px' },
+  modal: { background: '#FFFFFF', borderRadius: '12px', padding: '28px', width: '100%', maxWidth: '400px', boxShadow: '0 8px 40px rgba(0,0,0,0.12)' },
   modalTitle: { fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px', letterSpacing: '-0.2px' },
-  modalSub: { fontSize: '13px', color: '#8C8C8A', lineHeight: '1.6', marginBottom: '20px' },
+  modalSub: { fontSize: '13px', color: '#8C8C8A', lineHeight: '1.6', marginBottom: '18px' },
   modalLabel: { fontSize: '13px', fontWeight: '500', color: '#3D3D3B', marginBottom: '6px', display: 'block' },
-  modalInput: {
-    width: '100%', padding: '9px 12px', fontSize: '14px',
-    border: '1px solid #E5E5E3', borderRadius: '7px', outline: 'none',
-    boxSizing: 'border-box', marginBottom: '12px', color: '#1A1A1A', background: '#FAFAF9',
-  },
-  modalError: {
-    fontSize: '13px', color: '#C9372C', background: '#FFF0EE',
-    border: '1px solid #FFDBD8', borderRadius: '7px',
-    padding: '9px 12px', marginBottom: '14px',
-  },
+  modalInput: { width: '100%', padding: '9px 12px', fontSize: '14px', border: '1px solid #E5E5E3', borderRadius: '7px', outline: 'none', boxSizing: 'border-box', marginBottom: '12px', color: '#1A1A1A', background: '#FAFAF9' },
+  modalInputErr: { borderColor: '#E5534B' },
+  modalErr: { fontSize: '13px', color: '#C9372C', background: '#FFF0EE', border: '1px solid #FFDBD8', borderRadius: '7px', padding: '9px 12px', marginBottom: '14px' },
   modalHint: { fontSize: '12px', color: '#A0A09E', marginBottom: '18px', lineHeight: '1.5' },
+  modalDivider: { borderTop: '1px solid #F0F0EE', margin: '16px 0' },
   modalActions: { display: 'flex', gap: '8px', justifyContent: 'flex-end' },
-  cancelBtn: {
-    fontSize: '13px', fontWeight: '500', color: '#3D3D3B',
-    background: '#F0F0EE', border: 'none', borderRadius: '6px',
-    padding: '7px 14px', cursor: 'pointer',
-  },
-  confirmBtn: {
-    fontSize: '13px', fontWeight: '500', color: '#FFFFFF',
-    background: '#1A1A1A', border: 'none', borderRadius: '6px',
-    padding: '7px 14px', cursor: 'pointer',
-  },
-  confirmBtnDanger: {
-    fontSize: '13px', fontWeight: '500', color: '#FFFFFF',
-    background: '#C9372C', border: 'none', borderRadius: '6px',
-    padding: '7px 14px', cursor: 'pointer',
-  },
+  cancelBtn: { fontSize: '13px', fontWeight: '500', color: '#3D3D3B', background: '#F0F0EE', border: 'none', borderRadius: '6px', padding: '7px 14px', cursor: 'pointer' },
+  confirmBtn: { fontSize: '13px', fontWeight: '500', color: '#FFFFFF', background: '#1A1A1A', border: 'none', borderRadius: '6px', padding: '7px 14px', cursor: 'pointer' },
+  confirmBtnDisabled: { fontSize: '13px', fontWeight: '500', color: '#FFFFFF', background: '#A0A09E', border: 'none', borderRadius: '6px', padding: '7px 14px', cursor: 'not-allowed' },
+  confirmBtnDanger: { fontSize: '13px', fontWeight: '500', color: '#FFFFFF', background: '#C9372C', border: 'none', borderRadius: '6px', padding: '7px 14px', cursor: 'pointer' },
+  confirmBtnDangerDisabled: { fontSize: '13px', fontWeight: '500', color: '#FFFFFF', background: '#E8A09C', border: 'none', borderRadius: '6px', padding: '7px 14px', cursor: 'not-allowed' },
 
-  loading: {
-    minHeight: '100vh', background: '#F7F7F5',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontFamily: "'Inter', sans-serif", fontSize: '14px', color: '#A0A09E',
-  },
+  loading: { minHeight: '100vh', background: '#F7F7F5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif", fontSize: '14px', color: '#A0A09E' },
 };
-
-const activities = [
-  { icon: '🔐', bg: '#EEF4FF', text: 'Signed in successfully', time: 'Just now' },
-  { icon: '✅', bg: '#EEFAF4', text: 'JWT token issued — valid for 7 days', time: 'Just now' },
-  { icon: '👤', bg: '#F5F0FF', text: 'Profile loaded from database', time: 'Just now' },
-  { icon: '🛡️', bg: '#FFF7EE', text: 'Protected route accessed', time: 'Just now' },
-];
 
 export default function DashboardPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [modalError, setModalError] = useState('');
-  const navigate = useNavigate();
+  const [modal, setModal] = useState(null); // 'manage' | 'remove'
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalErr, setModalErr] = useState('');
 
+  // manage password fields
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+
+  // remove account field
+  const [removePw, setRemovePw] = useState('');
+
+  const navigate = useNavigate();
   const storedName = localStorage.getItem('userName') || '';
 
   useEffect(() => {
@@ -266,31 +174,42 @@ export default function DashboardPage() {
 
   const openModal = (type) => {
     setModal(type);
-    setNewPassword('');
-    setConfirmPassword('');
-    setModalError('');
+    setModalErr('');
+    setCurrentPw(''); setNewPw(''); setConfirmPw(''); setRemovePw('');
   };
 
-  const handleChangePassword = (e) => {
+  // ── CHANGE PASSWORD ──────────────────────────────────
+  const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (!PASSWORD_REGEX.test(newPassword)) {
-      setModalError('Password must be 8+ chars with uppercase, lowercase, number, and special character (@$!%*?&).');
-      return;
+    if (!currentPw) { setModalErr('Enter your current password.'); return; }
+    if (!PASSWORD_REGEX.test(newPw)) { setModalErr('New password must be 8+ chars with uppercase, lowercase, number, and special character (@$!%*?&).'); return; }
+    if (newPw !== confirmPw) { setModalErr('New passwords do not match.'); return; }
+    setModalLoading(true);
+    try {
+      await api.put('/auth/password', { currentPassword: currentPw, newPassword: newPw });
+      setModal(null);
+    } catch (err) {
+      setModalErr(err.response?.data?.message || 'Failed to update password. Check your current password.');
+    } finally {
+      setModalLoading(false);
     }
-    if (newPassword !== confirmPassword) {
-      setModalError('Passwords do not match.');
-      return;
-    }
-    // Wire up: await api.put('/auth/password', { password: newPassword })
-    alert('Password updated! Wire up PUT /api/auth/password to persist.');
-    setModal(null);
   };
 
-  const handleRemoveAccount = (e) => {
+  // ── REMOVE ACCOUNT ───────────────────────────────────
+  const handleRemoveAccount = async (e) => {
     e.preventDefault();
-    // Wire up: await api.delete('/auth/account')
-    alert('Account removed! Wire up DELETE /api/auth/account to persist.');
-    handleLogout();
+    if (!removePw) { setModalErr('Enter your password to confirm.'); return; }
+    setModalLoading(true);
+    try {
+      await api.delete('/auth/account', { data: { password: removePw } });
+      localStorage.removeItem('token');
+      localStorage.removeItem('userName');
+      navigate('/login');
+    } catch (err) {
+      setModalErr(err.response?.data?.message || 'Incorrect password. Account not deleted.');
+    } finally {
+      setModalLoading(false);
+    }
   };
 
   if (loading) return <div style={s.loading}>Loading...</div>;
@@ -315,7 +234,6 @@ export default function DashboardPage() {
 
       <main style={s.main}>
 
-        {/* HEADER */}
         <div style={s.pageHeader}>
           <div style={s.greeting}>{getGreeting()}, {displayName} 👋</div>
           <div style={s.greetingSub}>Here's what's going on with your account.</div>
@@ -344,8 +262,6 @@ export default function DashboardPage() {
 
         {/* PROFILE + ACTIVITY */}
         <div style={s.twoCol}>
-
-          {/* PROFILE */}
           <div style={s.card}>
             <div style={s.cardHead}>
               <span style={s.cardTitle}>Profile</span>
@@ -369,7 +285,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* ACTIVITY */}
           <div style={s.card}>
             <div style={s.cardHead}>
               <span style={s.cardTitle}>Recent activity</span>
@@ -377,13 +292,7 @@ export default function DashboardPage() {
             </div>
             <div style={s.cardBody}>
               {activities.map((a, i) => (
-                <div
-                  key={i}
-                  style={{
-                    ...s.activityItem,
-                    ...(i === activities.length - 1 ? s.activityItemLast : {}),
-                  }}
-                >
+                <div key={i} style={{ ...s.activityItem, ...(i === activities.length - 1 ? s.activityItemLast : {}) }}>
                   <div style={{ ...s.activityIconWrap, background: a.bg }}>{a.icon}</div>
                   <div style={s.activityContent}>
                     <div style={s.activityText}>{a.text}</div>
@@ -395,7 +304,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* SECURITY + REMOVE ACCOUNT */}
+        {/* SECURITY + REMOVE */}
         <div style={s.bottomGrid}>
           <div style={s.bottomCard}>
             <div style={s.bottomLeft}>
@@ -422,53 +331,87 @@ export default function DashboardPage() {
 
       </main>
 
-      {/* MANAGE PASSWORD MODAL */}
+      {/* ── MANAGE PASSWORD MODAL ── */}
       {modal === 'manage' && (
         <div style={s.overlay} onClick={() => setModal(null)}>
           <div style={s.modal} onClick={(e) => e.stopPropagation()}>
             <div style={s.modalTitle}>Change password</div>
-            <div style={s.modalSub}>
-              Must be 8+ characters with uppercase, lowercase, a number, and a special character (@$!%*?&).
-            </div>
-            {modalError && <div style={s.modalError}>{modalError}</div>}
+            <div style={s.modalSub}>Enter your current password first, then set a new one.</div>
+
+            {modalErr && <div style={s.modalErr}>{modalErr}</div>}
+
+            <label style={s.modalLabel}>Current password</label>
+            <input
+              type="password" placeholder="Your current password"
+              value={currentPw}
+              onChange={(e) => { setCurrentPw(e.target.value); setModalErr(''); }}
+              style={s.modalInput}
+            />
+
+            <div style={s.modalDivider} />
+
             <label style={s.modalLabel}>New password</label>
             <input
-              type="password"
-              placeholder="Enter new password"
-              value={newPassword}
-              onChange={(e) => { setNewPassword(e.target.value); setModalError(''); }}
+              type="password" placeholder="8+ chars, upper, lower, number, special"
+              value={newPw}
+              onChange={(e) => { setNewPw(e.target.value); setModalErr(''); }}
               style={s.modalInput}
             />
-            <label style={s.modalLabel}>Confirm password</label>
+
+            <label style={s.modalLabel}>Confirm new password</label>
             <input
-              type="password"
-              placeholder="Re-enter new password"
-              value={confirmPassword}
-              onChange={(e) => { setConfirmPassword(e.target.value); setModalError(''); }}
+              type="password" placeholder="Re-enter new password"
+              value={confirmPw}
+              onChange={(e) => { setConfirmPw(e.target.value); setModalErr(''); }}
               style={s.modalInput}
             />
+
             <div style={s.modalHint}>
               Your plain text password is never stored — only the bcrypt hash.
             </div>
+
             <div style={s.modalActions}>
               <button style={s.cancelBtn} onClick={() => setModal(null)}>Cancel</button>
-              <button style={s.confirmBtn} onClick={handleChangePassword}>Update password</button>
+              <button
+                style={modalLoading ? s.confirmBtnDisabled : s.confirmBtn}
+                onClick={handleChangePassword}
+                disabled={modalLoading}
+              >
+                {modalLoading ? 'Updating...' : 'Update password'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* REMOVE ACCOUNT MODAL */}
+      {/* ── REMOVE ACCOUNT MODAL ── */}
       {modal === 'remove' && (
         <div style={s.overlay} onClick={() => setModal(null)}>
           <div style={s.modal} onClick={(e) => e.stopPropagation()}>
             <div style={s.modalTitle}>Remove account</div>
             <div style={s.modalSub}>
-              This permanently deletes your account and all data from the database. This cannot be undone.
+              This permanently deletes your account and all data from the database. Enter your password to confirm.
             </div>
+
+            {modalErr && <div style={s.modalErr}>{modalErr}</div>}
+
+            <label style={s.modalLabel}>Your password</label>
+            <input
+              type="password" placeholder="Enter your password to confirm"
+              value={removePw}
+              onChange={(e) => { setRemovePw(e.target.value); setModalErr(''); }}
+              style={s.modalInput}
+            />
+
             <div style={s.modalActions}>
               <button style={s.cancelBtn} onClick={() => setModal(null)}>Cancel</button>
-              <button style={s.confirmBtnDanger} onClick={handleRemoveAccount}>Yes, remove account</button>
+              <button
+                style={modalLoading ? s.confirmBtnDangerDisabled : s.confirmBtnDanger}
+                onClick={handleRemoveAccount}
+                disabled={modalLoading}
+              >
+                {modalLoading ? 'Removing...' : 'Yes, remove account'}
+              </button>
             </div>
           </div>
         </div>
