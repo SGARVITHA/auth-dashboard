@@ -1,4 +1,4 @@
-# AuthKit — Auth Starter + Dashboard
+# AuthKit - Auth Starter + Dashboard
 
 A full authentication system built from scratch to understand how modern auth actually works — no Auth0, no Clerk, no Supabase Auth. Just JWT, bcrypt, PostgreSQL, and Express, wired up by hand.
 
@@ -144,4 +144,4 @@ This was built to deeply understand the full authentication lifecycle rather tha
 
 ## Author
 
-Built by Garvitha as part of a 7-project portfolio series leading up to placement preparation.
+Built by Garvitha as part of a 7-project series.
