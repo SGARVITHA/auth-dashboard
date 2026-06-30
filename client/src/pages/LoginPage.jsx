@@ -187,7 +187,11 @@ export default function LoginPage() {
             />
             {errors.password && <div style={s.fieldErr}>{errors.password}</div>}
           </div>
-
+                  <div style={{ textAlign: 'right', marginBottom: '16px', marginTop: '-8px' }}>
+          <Link to="/forgot-password" style={{ fontSize: '13px', color: '#8C8C8A', textDecoration: 'none' }}>
+            Forgot password?
+          </Link>
+        </div>
           <button
             onClick={handleSubmit} disabled={loading}
             style={{ ...s.button, ...(loading ? s.buttonDisabled : {}) }}

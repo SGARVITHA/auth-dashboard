@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const db = require('../db');
 const authMiddleware = require('../middleware/auth');
 const router = express.Router();
+const crypto = require('crypto');
+const { sendResetEmail } = require('../utils/email');
 
 // ── POST /register ──────────────────────────
 router.post('/register', async (req, res) => {
@@ -139,6 +141,97 @@ router.delete('/account', authMiddleware, async (req, res) => {
     await db.query('DELETE FROM users WHERE id = $1', [req.user.userId]);
  
     res.json({ message: 'Account deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── POST /forgot-password ─────────────────────────────
+
+
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email)
+    return res.status(400).json({ message: 'Email is required' });
+
+  try {
+    // 1. Find user — but don't reveal if they exist
+    const result = await db.query(
+      'SELECT id, email FROM users WHERE email = $1', [email]
+    );
+    const user = result.rows[0];
+
+    // Always send the same response regardless
+    if (!user) {
+      return res.json({
+        message: 'If that email exists, we\'ve sent a reset link.'
+      });
+    }
+
+    // 2. Generate token + expiry
+    const crypto = require('crypto');
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // 3. Save token + expiry to DB
+    await db.query(
+      'UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE id = $3',
+      [token, expiry, user.id]
+    );
+
+    // 4. Send the email
+    await sendResetEmail(user.email, token);
+
+    res.json({ message: 'If that email exists, we\'ve sent a reset link.' });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── POST /reset-password ─────────────────────────────
+router.post('/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword)
+    return res.status(400).json({ message: 'Token and new password are required' });
+
+  try {
+    // 1. Find user by token
+    const result = await db.query(
+      'SELECT * FROM users WHERE reset_token = $1', [token]
+    );
+    const user = result.rows[0];
+
+    if (!user)
+      return res.status(400).json({ message: 'Invalid or expired reset link' });
+
+    // 2. Check token hasn't expired
+    if (new Date() > new Date(user.reset_token_expiry)) {
+      // Clean up expired token
+      await db.query(
+        'UPDATE users SET reset_token = NULL, reset_token_expiry = NULL WHERE id = $1',
+        [user.id]
+      );
+      return res.status(400).json({ message: 'Reset link has expired. Request a new one.' });
+    }
+
+    // 3. Hash the new password
+    const hash = await bcrypt.hash(newPassword, 12);
+
+    // 4. Update password AND clear the token in one query
+    await db.query(
+      `UPDATE users
+       SET password_hash = $1,
+           reset_token = NULL,
+           reset_token_expiry = NULL
+       WHERE id = $2`,
+      [hash, user.id]
+    );
+
+    res.json({ message: 'Password reset successfully. You can now log in.' });
+
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
