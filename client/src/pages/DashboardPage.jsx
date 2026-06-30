@@ -132,6 +132,41 @@ const s = {
   confirmBtnDangerDisabled: { fontSize: '13px', fontWeight: '500', color: '#FFFFFF', background: '#E8A09C', border: 'none', borderRadius: '6px', padding: '7px 14px', cursor: 'not-allowed' },
 
   loading: { minHeight: '100vh', background: '#F7F7F5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif", fontSize: '14px', color: '#A0A09E' },
+
+  
+};
+const bannerStyles = {
+  banner: {
+    background: '#FFF7EE',
+    border: '1px solid #FAE0BD',
+    borderRadius: '10px',
+    padding: '14px 18px',
+    marginBottom: '20px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+  },
+  bannerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  bannerText: {
+    fontSize: '13px',
+    color: '#7A4A0F',
+  },
+  bannerBtn: {
+    fontSize: '13px',
+    fontWeight: '500',
+    color: '#7A4A0F',
+    background: '#FAE0BD',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '6px 13px',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
 };
 
 export default function DashboardPage() {
@@ -140,6 +175,7 @@ export default function DashboardPage() {
   const [modal, setModal] = useState(null); // 'manage' | 'remove'
   const [modalLoading, setModalLoading] = useState(false);
   const [modalErr, setModalErr] = useState('');
+  const [resendStatus, setResendStatus] = useState(''); // '', 'sending', 'sent'
 
   // manage password fields
   const [currentPw, setCurrentPw] = useState('');
@@ -153,7 +189,7 @@ export default function DashboardPage() {
   const storedName = localStorage.getItem('userName') || '';
 
   useEffect(() => {
-    (async () => {
+    const fetchUser = async () => {
       try {
         const { data } = await api.get('/auth/me');
         setUser(data);
@@ -163,9 +199,12 @@ export default function DashboardPage() {
       } finally {
         setLoading(false);
       }
-    })();
+    };
+  
+    fetchUser();
+    window.addEventListener('focus', fetchUser); // refetch when user comes back to tab
+    return () => window.removeEventListener('focus', fetchUser);
   }, []);
-
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userName');
@@ -176,6 +215,16 @@ export default function DashboardPage() {
     setModal(type);
     setModalErr('');
     setCurrentPw(''); setNewPw(''); setConfirmPw(''); setRemovePw('');
+  };
+// ── EMAIL VERIFICATION ──────────────────────────────────
+  const handleResendVerification = async () => {
+    setResendStatus('sending');
+    try {
+      await api.post('/auth/resend-verification');
+      setResendStatus('sent');
+    } catch {
+      setResendStatus('');
+    }
   };
 
   // ── CHANGE PASSWORD ──────────────────────────────────
@@ -238,7 +287,23 @@ export default function DashboardPage() {
           <div style={s.greeting}>{getGreeting()}, {displayName} 👋</div>
           <div style={s.greetingSub}>Here's what's going on with your account.</div>
         </div>
-
+        {!user.is_verified && (
+  <div style={bannerStyles.banner}>
+    <div style={bannerStyles.bannerLeft}>
+      <span>📧</span>
+      <span style={bannerStyles.bannerText}>
+        Your email isn't verified yet. Check your inbox for the verification link.
+      </span>
+    </div>
+    <button
+      style={bannerStyles.bannerBtn}
+      onClick={handleResendVerification}
+      disabled={resendStatus === 'sending' || resendStatus === 'sent'}
+    >
+      {resendStatus === 'sent' ? 'Sent!' : resendStatus === 'sending' ? 'Sending...' : 'Resend email'}
+       </button>
+       </div>
+        )}
         {/* STATS */}
         <div style={s.statsGrid}>
           <div style={s.statCard}>

@@ -5,35 +5,38 @@ const db = require('../db');
 const authMiddleware = require('../middleware/auth');
 const router = express.Router();
 const crypto = require('crypto');
-const { sendResetEmail } = require('../utils/email');
+const { sendResetEmail ,sendVerificationEmail} = require('../utils/email');
 
 // ── POST /register ──────────────────────────
 router.post('/register', async (req, res) => {
   const { name, email, password } = req.body;
- 
   if (!name || !email || !password)
     return res.status(400).json({ message: 'Name, email, and password are required' });
- 
+
   try {
     const existing = await db.query('SELECT id FROM users WHERE email = $1', [email]);
     if (existing.rows.length > 0)
       return res.status(400).json({ message: 'Email already in use' });
- 
+
     const hash = await bcrypt.hash(password, 12);
- 
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+
     const result = await db.query(
-      'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email',
-      [name.trim(), email, hash]
+      `INSERT INTO users (name, email, password_hash, verify_token, is_verified) 
+       VALUES ($1, $2, $3, $4, false) RETURNING id, name, email`,
+      [name.trim(), email, hash, verifyToken]
     );
     const user = result.rows[0];
- 
+
+    await sendVerificationEmail(user.email, verifyToken);
+
     const token = jwt.sign(
       { userId: user.id, email: user.email, name: user.name },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
- 
-    res.status(201).json({ token });
+
+    res.status(201).json({ token, message: 'Check your email to verify your account.' });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -69,7 +72,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', authMiddleware, async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT id, name, email, created_at FROM users WHERE id = $1',
+      'SELECT id, name, email, is_verified, created_at FROM users WHERE id = $1',
       [req.user.userId]
     );
     const user = result.rows[0];
@@ -236,5 +239,59 @@ router.post('/reset-password', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// ── GET /verify-email ─────────────────────────────
+
+router.get('/verify-email', async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ message: 'Token is required' });
+
+  try {
+    const result = await db.query(
+      'SELECT id FROM users WHERE verify_token = $1', [token]
+    );
+    const user = result.rows[0];
+
+    if (!user)
+      return res.status(400).json({ message: 'Invalid verification link' });
+
+    // Just set is_verified — DON'T null the token
+    await db.query(
+      'UPDATE users SET is_verified = true WHERE id = $1',
+      [user.id]
+    );
+
+    res.json({ message: 'Email verified successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── GET /resend-verify-email ─────────────────────────────
+
+router.post('/resend-verification', authMiddleware, async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT email, is_verified, verify_token FROM users WHERE id = $1',
+      [req.user.userId]
+    );
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (user.is_verified) return res.status(400).json({ message: 'Already verified' });
+ 
+    // Reuse existing token, or generate a new one if missing
+    let token = user.verify_token;
+    if (!token) {
+      token = crypto.randomBytes(32).toString('hex');
+      await db.query('UPDATE users SET verify_token = $1 WHERE id = $2', [token, req.user.userId]);
+    }
+ 
+    await sendVerificationEmail(user.email, token);
+    res.json({ message: 'Verification email resent' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+ 
 
 module.exports = router;

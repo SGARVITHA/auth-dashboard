@@ -30,5 +30,24 @@ const sendResetEmail = async (toEmail, resetToken) => {
     `
   });
 };
+const sendVerificationEmail = async (toEmail, verifyToken) => {
+  const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${verifyToken}`;
 
-module.exports = { sendResetEmail };
+  await resend.emails.send({
+    from: 'AuthKit <onboarding@resend.dev>',
+    to: toEmail,
+    subject: 'Verify your AuthKit account',
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2>Verify your email</h2>
+        <p>Click below to confirm your email address and activate your account.</p>
+        <a href="${verifyUrl}" style="display: inline-block; background: #1A1A1A; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500; margin: 16px 0;">
+          Verify email
+        </a>
+      </div>
+    `
+  });
+};
+
+module.exports = { sendResetEmail, sendVerificationEmail };
+
